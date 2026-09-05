@@ -29,6 +29,7 @@ internal sealed class NewsFlow
     private DispatcherTimer? headlinesRefreshTimer;
     private Headlines?       headlines;
     private Banner[]?        banners;
+    private Uri[]?           lastBannerUrls;
     private DateTimeOffset   lastActivateRefresh;
 
     private int isRefreshingHeadlines;
@@ -167,6 +168,15 @@ internal sealed class NewsFlow
         if (bannerItems.Length == 0)
             return;
 
+        // 横幅链接没变就不重置回第一张, 也避免重复下载与重复上传相同纹理
+        var bannerUrls = bannerItems.Select(b => b.LsbBanner).ToArray();
+
+        if (lastBannerUrls is { } previous && previous.Length == bannerUrls.Length && previous.SequenceEqual(bannerUrls))
+        {
+            banners = bannerItems;
+            return;
+        }
+
         var bannerBitmaps = new BitmapImage[bannerItems.Length];
 
         try
@@ -200,7 +210,8 @@ internal sealed class NewsFlow
             return;
         }
 
-        banners = bannerItems;
+        banners         = bannerItems;
+        lastBannerUrls  = bannerUrls;
         BannersUpdated?.Invoke(bannerBitmaps);
         Log.Information("轮播已刷新, 共 {BannerCount} 张", bannerBitmaps.Length);
     }

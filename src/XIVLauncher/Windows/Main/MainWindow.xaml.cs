@@ -27,7 +27,7 @@ public partial class MainWindow
 
         Model.NewsFlow.NewsItemsUpdated += items => Dispatcher.Invoke(() => NewsList.SetNewsItems(items));
         Model.NewsFlow.BannersUpdated   += bitmaps => Dispatcher.Invoke
-        (() =>
+(() =>
             {
                 NewsCarousel.UpdateBanners(bitmaps);
                 NewsCarousel.StartRotation();

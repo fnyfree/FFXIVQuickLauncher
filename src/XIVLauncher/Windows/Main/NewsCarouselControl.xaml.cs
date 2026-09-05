@@ -10,7 +10,9 @@ using XIVLauncher.Windows.ViewModel.Main.Models;
 namespace XIVLauncher.Windows.Main;
 
 /// <summary>
-///     新闻轮播横幅控件, 包含横幅图片与圆点指示器, 自行管理轮播定时器与淡入淡出动画
+///     新闻轮播横幅控件, 包含横幅图片与圆点指示器, 自行管理轮播定时器。
+///     切换采用交叉淡化: 底层 BannerImage 静止不重绘, 新图由 BannerOverlayImage 叠加淡入,
+///     每帧只混合一张缓存位图, 尽量压低轮播期间的逐帧呈现开销 (AMD 驱动下表现为 Copy 引擎占用)。
 /// </summary>
 public partial class NewsCarouselControl
 {
@@ -18,6 +20,7 @@ public partial class NewsCarouselControl
     private ObservableCollection<BannerDotInfo>? bannerDotList;
     private BitmapImage[]?                       bannerBitmaps;
     private int                                  currentBannerIndex;
+    private int                                  bannerSwitchVersion;
     private bool                                 isBannerRotationActive;
 
     /// <summary>
@@ -33,6 +36,11 @@ public partial class NewsCarouselControl
     /// </summary>
     public void UpdateBanners(BitmapImage[] bitmaps)
     {
+        // 作废可能在途的淡化回调, 并隐藏叠加层, 防止旧回调把旧图写回底层
+        bannerSwitchVersion++;
+        BannerOverlayImage.BeginAnimation(OpacityProperty, null);
+        BannerOverlayImage.Source = null;
+
         bannerBitmaps = bitmaps;
         bannerDotList = [];
 
@@ -51,6 +59,9 @@ public partial class NewsCarouselControl
     public void ClearBanners()
     {
         StopRotation();
+        bannerSwitchVersion++;
+        BannerOverlayImage.BeginAnimation(OpacityProperty, null);
+        BannerOverlayImage.Source = null;
         bannerBitmaps         = null;
         bannerDotList         = null;
         BannerImage.Source    = null;
@@ -136,16 +147,24 @@ public partial class NewsCarouselControl
         currentBannerIndex = bannerIndex;
         SetBannerDotActiveState(bannerIndex);
 
-        var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200));
-        var fadeIn  = new DoubleAnimation(1, TimeSpan.FromMilliseconds(200));
+        // 新图在旧图之上淡入: 旧图零重绘, 每帧只混合新图一张缓存位图。
+        // 版本号用于丢弃快速连续切换时被中断动画的清理回调 (WPF 移除未完成
+        // 的动画时钟时也会触发 Completed)
+        var version  = ++bannerSwitchVersion;
+        var fadeIn   = new DoubleAnimation(1, TimeSpan.FromMilliseconds(150));
 
-        fadeOut.Completed += (_, _) =>
+        fadeIn.Completed += (_, _) =>
         {
-            BannerImage.Source = bannerBitmaps[bannerIndex];
-            BannerImage.BeginAnimation(OpacityProperty, fadeIn);
+            if (version != bannerSwitchVersion)
+                return;
+
+            BannerImage.Source         = bannerBitmaps[bannerIndex];
+            BannerOverlayImage.BeginAnimation(OpacityProperty, null);
+            BannerOverlayImage.Source  = null;
         };
 
-        BannerImage.BeginAnimation(OpacityProperty, fadeOut);
+        BannerOverlayImage.Source = bannerBitmaps[bannerIndex];
+        BannerOverlayImage.BeginAnimation(OpacityProperty, fadeIn);
     }
 
     private void SetBannerDotActiveState(int activeIndex)

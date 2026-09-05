@@ -17,12 +17,15 @@
             Cursor="Hand"
             MouseUp="BannerCard_MouseUp">
             <Grid>
-                <!-- CacheMode=BitmapCache: 淡入淡出只混合缓存位图, 不逐帧重新光栅化图片;
-                     配合 NewsFlow 里按显示尺寸解码 (DecodePixelWidth) 控制轮播切换的 GPU 瞬时占用 -->
+                <!-- 交叉淡化: 底层图静止不重绘, BannerOverlayImage 叠加淡入新图且带 BitmapCache,
+                     每帧只混合一张缓存位图; 解码尺寸见 NewsFlow 的 DecodePixelWidth -->
                 <Image x:Name="BannerImage"
                        Stretch="Fill"
-                       CacheMode="BitmapCache"
                        Source="pack://application:,,,/Resources/placeholder-news.png" />
+                <Image x:Name="BannerOverlayImage"
+                       Stretch="Fill"
+                       Opacity="0"
+                       CacheMode="BitmapCache" />
             </Grid>
         </materialDesign:Card>
 
@@ -38,7 +41,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:BannerDotInfo}">
-                        <RadioButton GroupName="banner"
+                            <RadioButton GroupName="banner"
                                      IsChecked="{Binding Active, Mode=OneWay}"
                                      Checked="BannerDot_OnChecked"
                                      MouseEnter="RadioButton_MouseEnter"
