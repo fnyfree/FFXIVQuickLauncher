@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using XIVLauncher.Windows.ViewModel.Main.Models;
@@ -11,8 +10,9 @@ namespace XIVLauncher.Windows.Main;
 
 /// <summary>
 ///     新闻轮播横幅控件, 包含横幅图片与圆点指示器, 自行管理轮播定时器。
-///     切换采用交叉淡化: 底层 BannerImage 静止不重绘, 新图由 BannerOverlayImage 叠加淡入,
-///     每帧只混合一张缓存位图, 尽量压低轮播期间的逐帧呈现开销 (AMD 驱动下表现为 Copy 引擎占用)。
+///     切换为直接换图、无任何过渡动画: WPF 保留模式下静止展示本身零消耗,
+///     每次切换仅重绘一帧, 避免轮播期间逐帧呈现造成的 GPU 瞬时占用
+///     (AMD 驱动下表现为 Copy 引擎负载)。
 /// </summary>
 public partial class NewsCarouselControl
 {
@@ -20,7 +20,6 @@ public partial class NewsCarouselControl
     private ObservableCollection<BannerDotInfo>? bannerDotList;
     private BitmapImage[]?                       bannerBitmaps;
     private int                                  currentBannerIndex;
-    private int                                  bannerSwitchVersion;
     private bool                                 isBannerRotationActive;
 
     /// <summary>
@@ -36,11 +35,6 @@ public partial class NewsCarouselControl
     /// </summary>
     public void UpdateBanners(BitmapImage[] bitmaps)
     {
-        // 作废可能在途的淡化回调, 并隐藏叠加层, 防止旧回调把旧图写回底层
-        bannerSwitchVersion++;
-        BannerOverlayImage.BeginAnimation(OpacityProperty, null);
-        BannerOverlayImage.Source = null;
-
         bannerBitmaps = bitmaps;
         bannerDotList = [];
 
@@ -59,9 +53,6 @@ public partial class NewsCarouselControl
     public void ClearBanners()
     {
         StopRotation();
-        bannerSwitchVersion++;
-        BannerOverlayImage.BeginAnimation(OpacityProperty, null);
-        BannerOverlayImage.Source = null;
         bannerBitmaps         = null;
         bannerDotList         = null;
         BannerImage.Source    = null;
@@ -147,24 +138,8 @@ public partial class NewsCarouselControl
         currentBannerIndex = bannerIndex;
         SetBannerDotActiveState(bannerIndex);
 
-        // 新图在旧图之上淡入: 旧图零重绘, 每帧只混合新图一张缓存位图。
-        // 版本号用于丢弃快速连续切换时被中断动画的清理回调 (WPF 移除未完成
-        // 的动画时钟时也会触发 Completed)
-        var version  = ++bannerSwitchVersion;
-        var fadeIn   = new DoubleAnimation(1, TimeSpan.FromMilliseconds(150));
-
-        fadeIn.Completed += (_, _) =>
-        {
-            if (version != bannerSwitchVersion)
-                return;
-
-            BannerImage.Source         = bannerBitmaps[bannerIndex];
-            BannerOverlayImage.BeginAnimation(OpacityProperty, null);
-            BannerOverlayImage.Source  = null;
-        };
-
-        BannerOverlayImage.Source = bannerBitmaps[bannerIndex];
-        BannerOverlayImage.BeginAnimation(OpacityProperty, fadeIn);
+        // 直接换图, 无过渡动画: 每次切换只重绘一帧, 其余时间零消耗
+        BannerImage.Source = bannerBitmaps[bannerIndex];
     }
 
     private void SetBannerDotActiveState(int activeIndex)
