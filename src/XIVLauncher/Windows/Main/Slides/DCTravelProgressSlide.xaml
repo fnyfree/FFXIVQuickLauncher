@@ -22,26 +22,41 @@
                   Height="80"
                   HorizontalAlignment="Center"
                   Visibility="{Binding DCTravelPage.IsTravelInProgress, Converter={StaticResource BoolToVis}}">
+                <!-- 永续动画跟随 IsVisible 启停 (Transitioner 未选中的页仅 Hidden 不卸载),
+                     并用 ScaleTransform 代替 Width/Height 以避免每帧布局 -->
                 <Ellipse Fill="{DynamicResource MaterialDesign.Brush.Primary}"
                          HorizontalAlignment="Center"
-                         VerticalAlignment="Center" Width="48" Height="48">
-                    <Ellipse.Triggers>
-                        <EventTrigger RoutedEvent="Loaded">
-                            <BeginStoryboard>
-                                <Storyboard RepeatBehavior="Forever">
-                                    <DoubleAnimation Storyboard.TargetProperty="Width"
-                                                     From="48" To="80" Duration="0:0:1.5"
-                                                     AutoReverse="True" />
-                                    <DoubleAnimation Storyboard.TargetProperty="Height"
-                                                     From="48" To="80" Duration="0:0:1.5"
-                                                     AutoReverse="True" />
-                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                     From="1" To="0.35" Duration="0:0:1.5"
-                                                     AutoReverse="True" />
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                    </Ellipse.Triggers>
+                         VerticalAlignment="Center" Width="48" Height="48"
+                         RenderTransformOrigin="0.5,0.5">
+                    <Ellipse.RenderTransform>
+                        <ScaleTransform />
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Style.Triggers>
+                                <Trigger Property="IsVisible" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard x:Name="PulseEllipseBegin">
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                 From="1" To="1.667" Duration="0:0:1.5"
+                                                                 AutoReverse="True" />
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                 From="1" To="1.667" Duration="0:0:1.5"
+                                                                 AutoReverse="True" />
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="1" To="0.35" Duration="0:0:1.5"
+                                                                 AutoReverse="True" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="PulseEllipseBegin" />
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
                 </Ellipse>
                 <materialDesign:PackIcon Kind="Rocket" Width="24" Height="24"
                                          HorizontalAlignment="Center"
