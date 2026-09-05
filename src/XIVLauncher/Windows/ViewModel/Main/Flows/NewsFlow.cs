@@ -17,6 +17,12 @@ internal sealed class NewsFlow
     private static readonly TimeSpan REFRESH_INTERVAL  = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan ACTIVATE_COOLDOWN = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    ///     轮播横幅按此宽度解码 (显示宽 450 DIP 的 2 倍, 覆盖高 DPI; 小图不会被放大),
+    ///     避免按原图 940/1880px 解码导致轮播切换时 GPU 瞬时占用过高
+    /// </summary>
+    private const int BannerDecodePixelWidth = 900;
+
     private readonly MainWindowViewModel vm;
     private readonly Launcher           launcher;
 
@@ -179,6 +185,7 @@ internal sealed class NewsFlow
                                   bitmapImage.BeginInit();
                                   bitmapImage.StreamSource = stream;
                                   bitmapImage.CacheOption  = BitmapCacheOption.OnLoad;
+                                  bitmapImage.DecodePixelWidth = BannerDecodePixelWidth;
                                   bitmapImage.EndInit();
                                   bitmapImage.Freeze();
 

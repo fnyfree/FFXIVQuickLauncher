@@ -17,8 +17,11 @@
             Cursor="Hand"
             MouseUp="BannerCard_MouseUp">
             <Grid>
+                <!-- CacheMode=BitmapCache: 淡入淡出只混合缓存位图, 不逐帧重新光栅化图片;
+                     配合 NewsFlow 里按显示尺寸解码 (DecodePixelWidth) 控制轮播切换的 GPU 瞬时占用 -->
                 <Image x:Name="BannerImage"
                        Stretch="Fill"
+                       CacheMode="BitmapCache"
                        Source="pack://application:,,,/Resources/placeholder-news.png" />
             </Grid>
         </materialDesign:Card>
