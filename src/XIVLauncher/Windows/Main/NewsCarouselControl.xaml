@@ -17,11 +17,15 @@
             Cursor="Hand"
             MouseUp="BannerCard_MouseUp">
             <Grid>
-                <!-- 直接换图无动画: 静止展示零消耗, 切换仅重绘一帧;
-                     解码尺寸见 NewsFlow 的 DecodePixelWidth -->
+                <!-- 交叉淡化: 底层图静止不重绘, BannerOverlayImage 叠加淡入新图且带 BitmapCache,
+                     每帧只混合一张缓存位图; 解码尺寸见 NewsFlow 的 DecodePixelWidth -->
                 <Image x:Name="BannerImage"
                        Stretch="Fill"
                        Source="pack://application:,,,/Resources/placeholder-news.png" />
+                <Image x:Name="BannerOverlayImage"
+                       Stretch="Fill"
+                       Opacity="0"
+                       CacheMode="BitmapCache" />
             </Grid>
         </materialDesign:Card>
 
@@ -55,8 +59,34 @@
                                         <Trigger Property="IsChecked" Value="True">
                                             <Setter TargetName="DotBorder" Property="Background"
                                                     Value="#FFFFFFFF" />
-                                            <Setter TargetName="DotBorder" Property="Width"
-                                                    Value="24" />
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation
+                                                            Storyboard.TargetName="DotBorder"
+                                                            Storyboard.TargetProperty="Width"
+                                                            To="24" Duration="0:0:0.2">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation
+                                                            Storyboard.TargetName="DotBorder"
+                                                            Storyboard.TargetProperty="Width"
+                                                            To="8" Duration="0:0:0.2">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
                                         </Trigger>
                                         <MultiTrigger>
                                             <MultiTrigger.Conditions>
